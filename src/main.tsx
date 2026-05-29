@@ -10,13 +10,9 @@ class ChatWidgetElement extends HTMLElement {
   }
 
   connectedCallback() {
-    if (!this.shadowRoot) return;
+    if (!this.shadowRoot || this.shadowRoot.childNodes.length > 0) return;
 
-    if (this.shadowRoot.childNodes.length > 0) return;
-
-    // Inject into document <head> so Tailwind v4 @property variables are
-    // available globally. Guard against mounting the widget more than once.
-    if (!document.head.querySelector(`link[data-chat-widget-styles]`)) {
+    if (!document.head.querySelector('link[data-chat-widget-styles]')) {
       const globalLink = document.createElement('link');
       globalLink.rel = 'stylesheet';
       globalLink.href = cssUrl;
@@ -24,8 +20,6 @@ class ChatWidgetElement extends HTMLElement {
       document.head.appendChild(globalLink);
     }
 
-    // Inject the same URL into the shadow root for Tailwind utility classes.
-    // Browser serves this from cache — only ONE real network request is made.
     const shadowLink = document.createElement('link');
     shadowLink.rel = 'stylesheet';
     shadowLink.href = cssUrl;
@@ -35,8 +29,7 @@ class ChatWidgetElement extends HTMLElement {
     mountPoint.id = 'chat-widget-root';
     this.shadowRoot.appendChild(mountPoint);
 
-    const root = createRoot(mountPoint);
-    root.render(
+    createRoot(mountPoint).render(
       <StrictMode>
         <App />
       </StrictMode>
@@ -45,4 +38,3 @@ class ChatWidgetElement extends HTMLElement {
 }
 
 customElements.define('chat-widget', ChatWidgetElement);
-

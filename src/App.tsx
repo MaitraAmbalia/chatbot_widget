@@ -1,13 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, Minus, Square } from 'lucide-react';
 
-// ─── CONFIGURATION ──────────────────────────────────────────────────
-// Change this URL to point to your backend's chat endpoint.
-// Your backend MUST accept POST { employeeNumber, message } and
-// respond with a text/event-stream (SSE) of `data: <token>\n\n` chunks.
-// See README.md for full backend examples (OpenAI, Gemini, Anthropic, Ollama).
 const CHAT_API_URL = '/chat';
-// ────────────────────────────────────────────────────────────────────
 
 interface Message {
   role: 'user' | 'bot';
@@ -21,7 +15,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +39,6 @@ export default function App() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Bug fix: always return after stopping; don't send a new message in the same tick
     if (isGenerating) {
       stopGeneration();
       return;
@@ -85,7 +78,7 @@ export default function App() {
       }
 
       setMessages(prev => [...prev, { role: 'bot', content: '' }]);
-      
+
       const reader = response.body?.getReader();
       const decoder = new TextDecoder('utf-8');
 
@@ -97,16 +90,16 @@ export default function App() {
 
       let botMessageContent = '';
       let buffer = '';
+
       while (true) {
         const { value, done } = await reader.read();
         if (done) {
-          // Process any remaining data in the buffer when the stream ends
           if (buffer && buffer.startsWith('data: ')) {
             botMessageContent += buffer.slice(6);
             setMessages(prev => {
-              const newMessages = [...prev];
-              newMessages[newMessages.length - 1] = { role: 'bot', content: botMessageContent };
-              return newMessages;
+              const updated = [...prev];
+              updated[updated.length - 1] = { role: 'bot', content: botMessageContent };
+              return updated;
             });
           }
           break;
@@ -114,28 +107,23 @@ export default function App() {
 
         const chunk = decoder.decode(value, { stream: true });
         buffer += chunk;
-        
-        // Buffered SSE parser
+
         const lines = buffer.split('\n');
-        // Keep the last partial line in the buffer
         buffer = lines.pop() || '';
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            botMessageContent += data;
+            botMessageContent += line.slice(6);
             setMessages(prev => {
-              const newMessages = [...prev];
-              newMessages[newMessages.length - 1] = { role: 'bot', content: botMessageContent };
-              return newMessages;
+              const updated = [...prev];
+              updated[updated.length - 1] = { role: 'bot', content: botMessageContent };
+              return updated;
             });
           }
         }
       }
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        console.log('Stream aborted by user');
-        // Bug fix: remove the ghost empty bot bubble that was added when streaming started
         setMessages(prev => {
           const last = prev[prev.length - 1];
           if (last?.role === 'bot' && last.content === '') {
@@ -155,8 +143,6 @@ export default function App() {
   };
 
   return (
-    // Bug fix: removed `fixed` positioning — it doesn't work correctly inside Shadow DOM.
-    // The host element (<chat-widget>) should be positioned fixed in the outer document instead.
     <div className="font-sans antialiased">
       {!isOpen ? (
         <button
@@ -168,7 +154,6 @@ export default function App() {
         </button>
       ) : (
         <div className="bg-white/80 backdrop-blur-2xl rounded-3xl shadow-[0_20px_60px_-10px_rgba(0,0,0,0.15)] w-[calc(100vw-2rem)] sm:w-[350px] h-[calc(100vh-5rem)] sm:h-[550px] max-h-[85vh] flex flex-col border border-white/60 overflow-hidden origin-bottom-right transition-all duration-300">
-          {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 flex justify-between items-center shadow-sm z-10">
             <div className="font-medium text-[15px] flex items-center gap-2.5">
               <div className="bg-white/20 p-1.5 rounded-lg text-white backdrop-blur-md">
@@ -185,7 +170,6 @@ export default function App() {
             </button>
           </div>
 
-          {/* Chat Window */}
           <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-slate-50/50 scroll-smooth">
             {messages.length === 0 && (
               <div className="text-center text-slate-500 mt-10 flex flex-col items-center gap-3">
@@ -195,7 +179,7 @@ export default function App() {
                 <p className="font-medium text-slate-600 text-[13px]">Hello! How can I help you today?</p>
               </div>
             )}
-            
+
             {messages.map((msg, idx) => (
               <div
                 key={idx}
@@ -212,7 +196,7 @@ export default function App() {
                 </div>
               </div>
             ))}
-            
+
             {isLoading && (
               <div className="flex justify-start">
                 <div className="bg-white border border-slate-200/60 ring-1 ring-slate-900/5 shadow-sm rounded-[16px] rounded-bl-[4px] px-4 py-3.5 flex gap-1.5 items-center">
@@ -222,7 +206,7 @@ export default function App() {
                 </div>
               </div>
             )}
-            
+
             {error && (
               <div className="text-center text-red-600 text-sm my-2 p-3 bg-red-50/80 backdrop-blur-sm rounded-xl border border-red-100 font-medium shadow-sm">
                 {error}
@@ -231,7 +215,6 @@ export default function App() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area */}
           <div className="p-3.5 bg-white/90 backdrop-blur-xl border-t border-white/50 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
             <form onSubmit={handleSubmit} className="flex items-center gap-2.5">
               <input
