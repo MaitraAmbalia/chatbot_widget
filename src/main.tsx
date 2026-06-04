@@ -34,7 +34,7 @@ class ChatWidgetElement extends HTMLElement {
         <App />
       </StrictMode>
     );
-  }
+  } s
 }
 
 customElements.define('chat-widget', ChatWidgetElement);
